@@ -1,0 +1,137 @@
+const products = [
+    // ... your product data
+];
+
+const reviews = [
+    // ... your review data
+];
+
+function renderProducts(filteredProducts) {
+    const productDisplay = document.getElementById('product-display');
+    productDisplay.innerHTML = '';
+    filteredProducts.forEach(product => {
+        const productCard = document.createElement('div');
+        productCard.classList.add('product-card');
+
+        const productImage = document.createElement('img');
+        productImage.classList.add('product-image');
+        productImage.src = product.image;
+        productCard.appendChild(productImage);
+
+        const productTitle = document.createElement('h2');
+        productTitle.classList.add('product-title');
+        productTitle.textContent = product.name;
+        productCard.appendChild(productTitle);
+
+        const productPrice = document.createElement('p');
+        productPrice.classList.add('product-price');
+        productPrice.textContent = `Price: $${product.price}`;
+        productCard.appendChild(productPrice);
+
+        const reviewSection = document.createElement('div');
+        reviewSection.classList.add('reviews');
+        reviewSection.innerHTML = `
+            <h3>Reviews:</h3>
+            <ul>
+                ${reviews.filter(review => review.productId === product.id)
+                    .map(review => `
+                        <li>
+                            <strong>${review.rating} stars</strong> - ${review.comment}
+                        </li>
+                    `)
+                    .join('')}
+            </ul>
+        `;
+        productCard.appendChild(reviewSection);
+
+        const addToCartButton = document.createElement('button');
+        addToCartButton.textContent = 'Add to Cart';
+        addToCartButton.addEventListener('click', () => addToCart(product.id));
+        productCard.appendChild(addToCartButton);
+
+        productDisplay.appendChild(productCard);
+    });
+}
+
+function filterProducts(category, minPrice, maxPrice) {
+    let filteredProducts = products;
+
+    if (category !== '') {
+        filteredProducts = filteredProducts.filter(product => product.category === category);
+    }
+
+    if (minPrice || maxPrice) {
+        filteredProducts = filteredProducts.filter(product => {
+            const price = parseFloat(product.price);
+            return (minPrice ? price >= minPrice : true) && (maxPrice ? price <= maxPrice : true);
+        });
+    }
+
+    renderProducts(filteredProducts);
+}
+
+function sortProducts(sortBy) {
+    const sortedProducts = products.sort((a, b) => {
+        if (sortBy === 'price-asc') {
+            return a.price - b.price;
+        } else if (sortBy === 'price-desc') {
+            return b.price - a.price;
+        } else if (sortBy === 'name-asc') {
+            return a.name.localeCompare(b.name);
+        } else {
+            return b.name.localeCompare(a.name);
+        }
+    });
+    renderProducts(sortedProducts);
+}
+
+function addToCart(productId) {
+    const cartItems = JSON.parse(localStorage.getItem('cartItems')) || [];
+    const existingItem = cartItems.find(item => item.id === productId);
+    if (existingItem) {
+        existingItem.quantity++;
+    } else {
+        cartItems.push({ id: productId, quantity: 1 });
+    }
+    localStorage.setItem('cartItems', JSON.stringify(cartItems));
+    updateCart();
+}
+
+function removeFromCart(productId) {
+    const cartItems = JSON.parse(localStorage.getItem('cartItems')) || [];
+    const updatedCartItems = cartItems.filter(item => item.id !== productId);
+    localStorage.setItem('cartItems', JSON.stringify(updatedCartItems));
+    updateCart();
+}
+
+function updateCart() {
+    const cartItems = JSON.parse(localStorage.getItem('cartItems')) || [];
+    const cartItemsElement = document.getElementById('cart-items');
+    cartItemsElement.innerHTML = '';
+    let total = 0;
+    cartItems.forEach(item => {
+        const product = products.find(product => product.id === item.id);
+        if (product) {
+            const cartItemElement = document.createElement('li');
+            cartItemElement.textContent = `${product.name} - Quantity: ${item.quantity} - Price: $${product.price * item.quantity}`;
+            cartItemsElement.appendChild(cartItemElement);
+            total += product.price * item.quantity;
+        }
+    });
+    document.getElementById('total').textContent = `$${total}`;
+}
+
+// Populate category filter options
+const categoryFilter = document.getElementById('category-filter');
+const uniqueCategories = products.map(product => product.category).filter((value, index, arr) => arr.indexOf(value) === index);
+uniqueCategories.forEach(category => {
+    const option = document.createElement('option');
+    option.value = category;
+    option.textContent = category;
+    categoryFilter.appendChild(option);
+});
+
+// Attach event listeners
+document.getElementById('filter-button').addEventListener('click', () => {
+    const category = document.getElementById('category-filter').value;
+    const minPrice = document.getElementById('min-price-filter').value;
